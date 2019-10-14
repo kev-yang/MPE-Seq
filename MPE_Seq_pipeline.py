@@ -194,65 +194,64 @@ def tagdust(output_file = "s_pombe_tagdust",
 
     fw.write(
         '''# !/bin/bash
-        #$ -l h_vmem=8G
-        #$ -l m_mem_free=8G
-        #$ -pe smp 20 -binding linear:20
-        module unload binutils
-        module load STAR
-        module load SRA-Toolkit
-        module load jdk
-        module load python/3.6
-        module load gcc8
-        module load SAMtools
-        #Now do real things
-        cd %s
-        mkdir STAR
-        for i in `cat %s`;
-        do
-            #echo "#Run FASTQC"
-            #echo "mkdir ./fastqc_1" >> DL_and_process_$i
-            #echo "mkdir ./fastqc_2" >> DL_and_process_$i
-            #echo "/home/yangk4/FastQC/fastqc $i\_1.fastq -o ./fastqc_1 &" >> DL_and_process_$i
-            #echo "/home/yangk4/FastQC/fastqc $i\_2.fastq -o ./fastqc_2 &" >> DL_and_process_$i
-            #echo "wait" >> DL_and_process_$i
-            echo "#Run Tagdust instead of BBDUK to filter out bad reads using HMM"
-            echo "tagdust $i\_1.fastq $i\_2.fastq -t %s -show_finger_seq"
-            echo "#Run FASTQC again"
-            echo "mkdir ./trimmed/fastqc_1" >> DL_and_process_$i
-            echo "mkdir ./trimmed/fastqc_2" >> DL_and_process_$i
-            echo "/home/yangk4/FastQC/fastqc ./trimmed/$i\_1_trimmed.fastq -o ./trimmed/fastqc_1 &" >> DL_and_process_$i
-            echo "/home/yangk4/FastQC/fastqc ./trimmed/$i\_2_trimmed.fastq -o ./trimmed/fastqc_2 &" >> DL_and_process_$i
-            echo "#Run STAR"
-            echo "STAR --genomeDir %s  --readFilesIn ./$i\_1_extract.fastq ./$i\_2_extract.fastq --runThreadN %s --outSAMtype BAM Unsorted --outFileNamePrefix ./$i. --outSAMattributes All --alignSJoverhangMin 8 --outSAMunmapped Within" >> DL_and_process_$i
-            echo "samtools sort -@ %s -o $i.Aligned.sorted.bam $i.Aligned.out.bam" >> DL_and_process_$i
-            echo "samtools index ./$i.Aligned.sorted.bam" >> DL_and_process_$i
-            echo "source /home/yangk4/majiq_2_install/env/bin/activate" >> DL_and_process_$i
-            echo "#Remove PCR Duplicates based on tag from Tagdust"
-            echo "umi_tools dedup --extract-umi-method=tag --umi-tag=FP -I $i.Aligned.sorted.bam --paired -S $i\_deduplicated.bam --log=$i\_UMI_deduplicated.log" >> DL_and_process_$i
-            echo "deactivate" >> DL_and_process_$i
-            #echo "#Index with samtools for MAJIQ"
-            #echo "samtools index $i\_deduplicated.bam" >> DL_and_process_$i
-            #echo "#Copy duplicate for rMATS"
-            #echo "cp ${i}_deduplicated.bam ${i}_deepfake.bam" >> DL_and_process_$i
-            #echo "#Run bedtools" >> DL_and_process_$i
-            #echo "#Run rMATS" >> DL_and_process_$i
-            #echo "source /home/yangk4/rmats_install/rmatsenv/bin/activate" >> DL_and_process_$i
-            #echo "${i}_deduplicated.bam" >> DL_and_process_${i}_b1
-            #echo "${i}_deepfake.bam" >> DL_and_process_${i}_b2
-            #mkdir ./rMATS_$i
-            #echo "python2 /home/yangk4/rmats_install/rMATS.4.0.2/rMATS-turbo-Linux-UCS2/rmats.py --b1 DL_and_process_${i}_b1 --b2 DL_and_process_${i}_b2 --gtf %s --od ./rMATS_$i --nthread %s" >> DL_and_process_$i
-            #echo "deactivate" >> DL_and_process_$i
-            #echo "#Run MAJIQ" >> DL_and_process_$i
-            #echo "source /home/yangk4/majiq_2_install/env/bin/activate" >> DL_and_process_$i
-            #mkdir ./majiq_$i
-            #echo -e "[info]\\nreadlen=%s\\nbamdirs=./\\ngenome=%s\\ngenome_path=%s\\n[experiments]\\nWT=${i}_deduplicated" >> ./majiq_$i/settings.txt
-            #echo "majiq build %s -c ./majiq_$i/settings.txt --output ./majiq_$i/build --nproc %s" >> DL_and_process_$i
-            #echo "majiq psi ./majiq_$i/build/$i\_deduplicated.majiq --nproc %s --output ./majiq_$i --name $i" >> DL_and_process_$i
-            #echo "voila psi ./majiq_$i/$i.psi.voila --splicegraph ./majiq_$i/build/splicegraph.sql -o ./majiq_$i/voila/$i" >> DL_and_process_$i
-            #echo "deactivate" >> DL_and_process_$i
-        done
-    
-        ''' % (root_dir, files_to_process,  # general params
+#$ -l h_vmem=8G
+#$ -l m_mem_free=8G
+#$ -pe smp 20 -binding linear:20
+module unload binutils
+module load STAR
+module load SRA-Toolkit
+module load jdk
+module load python/3.6
+module load gcc8
+module load SAMtools
+#Now do real things
+cd %s
+mkdir STAR
+for i in `cat %s`;
+    do
+        #echo "#Run FASTQC"
+        #echo "mkdir ./fastqc_1" >> DL_and_process_$i
+        #echo "mkdir ./fastqc_2" >> DL_and_process_$i
+        #echo "/home/yangk4/FastQC/fastqc $i\_1.fastq -o ./fastqc_1 &" >> DL_and_process_$i
+        #echo "/home/yangk4/FastQC/fastqc $i\_2.fastq -o ./fastqc_2 &" >> DL_and_process_$i
+        #echo "wait" >> DL_and_process_$i
+        echo "#Run Tagdust instead of BBDUK to filter out bad reads using HMM"
+        echo "tagdust $i\_1.fastq $i\_2.fastq -t %s -show_finger_seq"
+        echo "#Run FASTQC again"
+        echo "mkdir ./trimmed/fastqc_1" >> DL_and_process_$i
+        echo "mkdir ./trimmed/fastqc_2" >> DL_and_process_$i
+        echo "/home/yangk4/FastQC/fastqc ./trimmed/$i\_1_trimmed.fastq -o ./trimmed/fastqc_1 &" >> DL_and_process_$i
+        echo "/home/yangk4/FastQC/fastqc ./trimmed/$i\_2_trimmed.fastq -o ./trimmed/fastqc_2 &" >> DL_and_process_$i
+        echo "#Run STAR"
+        echo "STAR --genomeDir %s  --readFilesIn ./$i\_1_extract.fastq ./$i\_2_extract.fastq --runThreadN %s --outSAMtype BAM Unsorted --outFileNamePrefix ./$i. --outSAMattributes All --alignSJoverhangMin 8 --outSAMunmapped Within" >> DL_and_process_$i
+        echo "samtools sort -@ %s -o $i.Aligned.sorted.bam $i.Aligned.out.bam" >> DL_and_process_$i
+        echo "samtools index ./$i.Aligned.sorted.bam" >> DL_and_process_$i
+        echo "source /home/yangk4/majiq_2_install/env/bin/activate" >> DL_and_process_$i
+        echo "#Remove PCR Duplicates based on tag from Tagdust"
+        echo "umi_tools dedup --extract-umi-method=tag --umi-tag=FP -I $i.Aligned.sorted.bam --paired -S $i\_deduplicated.bam --log=$i\_UMI_deduplicated.log" >> DL_and_process_$i
+        echo "deactivate" >> DL_and_process_$i
+        #echo "#Index with samtools for MAJIQ"
+        #echo "samtools index $i\_deduplicated.bam" >> DL_and_process_$i
+        #echo "#Copy duplicate for rMATS"
+        #echo "cp ${i}_deduplicated.bam ${i}_deepfake.bam" >> DL_and_process_$i
+        #echo "#Run bedtools" >> DL_and_process_$i
+        #echo "#Run rMATS" >> DL_and_process_$i
+        #echo "source /home/yangk4/rmats_install/rmatsenv/bin/activate" >> DL_and_process_$i
+        #echo "${i}_deduplicated.bam" >> DL_and_process_${i}_b1
+        #echo "${i}_deepfake.bam" >> DL_and_process_${i}_b2
+        #mkdir ./rMATS_$i
+        #echo "python2 /home/yangk4/rmats_install/rMATS.4.0.2/rMATS-turbo-Linux-UCS2/rmats.py --b1 DL_and_process_${i}_b1 --b2 DL_and_process_${i}_b2 --gtf %s --od ./rMATS_$i --nthread %s" >> DL_and_process_$i
+        #echo "deactivate" >> DL_and_process_$i
+        #echo "#Run MAJIQ" >> DL_and_process_$i
+        #echo "source /home/yangk4/majiq_2_install/env/bin/activate" >> DL_and_process_$i
+        #mkdir ./majiq_$i
+        #echo -e "[info]\\nreadlen=%s\\nbamdirs=./\\ngenome=%s\\ngenome_path=%s\\n[experiments]\\nWT=${i}_deduplicated" >> ./majiq_$i/settings.txt
+        #echo "majiq build %s -c ./majiq_$i/settings.txt --output ./majiq_$i/build --nproc %s" >> DL_and_process_$i
+        #echo "majiq psi ./majiq_$i/build/$i\_deduplicated.majiq --nproc %s --output ./majiq_$i --name $i" >> DL_and_process_$i
+        #echo "voila psi ./majiq_$i/$i.psi.voila --splicegraph ./majiq_$i/build/splicegraph.sql -o ./majiq_$i/voila/$i" >> DL_and_process_$i
+        #echo "deactivate" >> DL_and_process_$i
+    done
+''' % (root_dir, files_to_process,  # general params
                nprocs,  # bbduck params
                genomepath, nprocs,  # STAR params
                str(int(nprocs) - 1),  # samtools sort params
