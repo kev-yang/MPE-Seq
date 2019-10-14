@@ -166,8 +166,8 @@ def tagdust(output_file = "s_pombe_tagdust",
                            gffpath = "/scr1/users/yangk4/ref/db/s_pombe_v2.gff3",
                            gtfpath = "/scr1/users/yangk4/ref/db/s_pombe_v2.gtf",
                            readlen =  "150",
-                           nprocs = "5",
-                           memory = "40"):
+                           nprocs = "20",
+                           memory = "160"):
     #Similar to the above but modified to run tagdust filtered reads through the aligner
     fw = open(output_file + "_process", 'w+')
 
@@ -209,12 +209,12 @@ def tagdust(output_file = "s_pombe_tagdust",
         mkdir STAR
         for i in `cat %s`;
         do
-            echo "#Run FASTQC"
-            echo "mkdir ./fastqc_1" >> DL_and_process_$i
-            echo "mkdir ./fastqc_2" >> DL_and_process_$i
-            echo "/home/yangk4/FastQC/fastqc $i\_1.fastq -o ./fastqc_1 &" >> DL_and_process_$i
-            echo "/home/yangk4/FastQC/fastqc $i\_2.fastq -o ./fastqc_2 &" >> DL_and_process_$i
-            echo "wait" >> DL_and_process_$i
+            #echo "#Run FASTQC"
+            #echo "mkdir ./fastqc_1" >> DL_and_process_$i
+            #echo "mkdir ./fastqc_2" >> DL_and_process_$i
+            #echo "/home/yangk4/FastQC/fastqc $i\_1.fastq -o ./fastqc_1 &" >> DL_and_process_$i
+            #echo "/home/yangk4/FastQC/fastqc $i\_2.fastq -o ./fastqc_2 &" >> DL_and_process_$i
+            #echo "wait" >> DL_and_process_$i
             echo "#Run Tagdust instead of BBDUK to filter out bad reads using HMM"
             echo "tagdust $i\_1.fastq $i\_2.fastq -t 20 -show_finger_seq"
             echo "#Run FASTQC again"
