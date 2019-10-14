@@ -216,20 +216,20 @@ for i in `cat %s`;
         #echo "/home/yangk4/FastQC/fastqc $i\_2.fastq -o ./fastqc_2 &" >> DL_and_process_$i
         #echo "wait" >> DL_and_process_$i
         echo "#Run Tagdust instead of BBDUK to filter out bad reads using HMM"
-        echo "tagdust $i\_1.fastq $i\_2.fastq -t %s -show_finger_seq"
+        echo "tagdust $i\_1.fastq $i\_2.fastq -t %s -show_finger_seq -arch mpe_seq_arch.txt" >> DL_and_process_$i
         echo "#Run FASTQC again"
-        echo "mkdir ./trimmed/fastqc_1" >> DL_and_process_$i
-        echo "mkdir ./trimmed/fastqc_2" >> DL_and_process_$i
-        echo "/home/yangk4/FastQC/fastqc ./trimmed/$i\_1_trimmed.fastq -o ./trimmed/fastqc_1 &" >> DL_and_process_$i
-        echo "/home/yangk4/FastQC/fastqc ./trimmed/$i\_2_trimmed.fastq -o ./trimmed/fastqc_2 &" >> DL_and_process_$i
+        #echo "mkdir ./trimmed/fastqc_1" >> DL_and_process_$i
+        #echo "mkdir ./trimmed/fastqc_2" >> DL_and_process_$i
+        #echo "/home/yangk4/FastQC/fastqc ./trimmed/$i\_1_trimmed.fastq -o ./trimmed/fastqc_1_dust &" >> DL_and_process_$i
+        #echo "/home/yangk4/FastQC/fastqc ./trimmed/$i\_2_trimmed.fastq -o ./trimmed/fastqc_2_dust &" >> DL_and_process_$i
         echo "#Run STAR"
-        echo "STAR --genomeDir %s  --readFilesIn ./$i\_1_extract.fastq ./$i\_2_extract.fastq --runThreadN %s --outSAMtype BAM Unsorted --outFileNamePrefix ./$i. --outSAMattributes All --alignSJoverhangMin 8 --outSAMunmapped Within" >> DL_and_process_$i
-        echo "samtools sort -@ %s -o $i.Aligned.sorted.bam $i.Aligned.out.bam" >> DL_and_process_$i
-        echo "samtools index ./$i.Aligned.sorted.bam" >> DL_and_process_$i
-        echo "source /home/yangk4/majiq_2_install/env/bin/activate" >> DL_and_process_$i
-        echo "#Remove PCR Duplicates based on tag from Tagdust"
-        echo "umi_tools dedup --extract-umi-method=tag --umi-tag=FP -I $i.Aligned.sorted.bam --paired -S $i\_deduplicated.bam --log=$i\_UMI_deduplicated.log" >> DL_and_process_$i
-        echo "deactivate" >> DL_and_process_$i
+        #echo "STAR --genomeDir %s  --readFilesIn ./$i\_1_extract.fastq ./$i\_2_extract.fastq --runThreadN %s --outSAMtype BAM Unsorted --outFileNamePrefix ./$i. --outSAMattributes All --alignSJoverhangMin 8 --outSAMunmapped Within" >> DL_and_process_$i
+        #echo "samtools sort -@ %s -o $i.Aligned.sorted.bam $i.Aligned.out.bam" >> DL_and_process_$i
+        #echo "samtools index ./$i.Aligned.sorted.bam" >> DL_and_process_$i
+        #echo "source /home/yangk4/majiq_2_install/env/bin/activate" >> DL_and_process_$i
+        #echo "#Remove PCR Duplicates based on tag from Tagdust"
+        #echo "umi_tools dedup --extract-umi-method=tag --umi-tag=FP -I $i.Aligned.sorted.bam --paired -S $i\_deduplicated.bam --log=$i\_UMI_deduplicated.log" >> DL_and_process_$i
+        #echo "deactivate" >> DL_and_process_$i
         #echo "#Index with samtools for MAJIQ"
         #echo "samtools index $i\_deduplicated.bam" >> DL_and_process_$i
         #echo "#Copy duplicate for rMATS"
