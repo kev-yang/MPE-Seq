@@ -216,7 +216,7 @@ def tagdust(output_file = "s_pombe_tagdust",
             #echo "/home/yangk4/FastQC/fastqc $i\_2.fastq -o ./fastqc_2 &" >> DL_and_process_$i
             #echo "wait" >> DL_and_process_$i
             echo "#Run Tagdust instead of BBDUK to filter out bad reads using HMM"
-            echo "tagdust $i\_1.fastq $i\_2.fastq -t 20 -show_finger_seq"
+            echo "tagdust $i\_1.fastq $i\_2.fastq -t %s -show_finger_seq"
             echo "#Run FASTQC again"
             echo "mkdir ./trimmed/fastqc_1" >> DL_and_process_$i
             echo "mkdir ./trimmed/fastqc_2" >> DL_and_process_$i
@@ -253,7 +253,7 @@ def tagdust(output_file = "s_pombe_tagdust",
         done
     
         ''' % (root_dir, files_to_process,  # general params
-               memory, nprocs,  # bbduck params
+               nprocs  # bbduck params
                genomepath, nprocs,  # STAR params
                str(int(nprocs) - 1),  # samtools sort params
                gtfpath, nprocs,  # rMATS params
