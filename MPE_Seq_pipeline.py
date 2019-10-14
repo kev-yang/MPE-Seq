@@ -53,6 +53,8 @@ def MPE_Seq_paired_process(output_file = "s_pombe",
 
     fw.write(
 '''# !/bin/bash
+#$ -V
+#$ -wd %s
 #$ -l h_vmem=8G
 #$ -l m_mem_free=8G
 #$ -pe smp 10 -binding linear:10
@@ -116,7 +118,8 @@ do
     echo "deactivate" >> DL_and_process_$i
 done
 
-''' % (root_dir,files_to_process, #general params
+''' % (root_dir, #general params
+root_dir,files_to_process, #general params
 memory,nprocs, #bbduck params
 genomepath,nprocs, #STAR params
 str(int(nprocs)-1), #samtools sort params
@@ -156,7 +159,17 @@ readlen,genome,genomepath, gffpath, nprocs, nprocs #MAJIQ params
 # done\n''' % genome)
     fw.close()
 
-def tagdust():
+def tagdust(output_file = "s_pombe",
+                           files_to_process="s_pombe_list",
+                           root_dir="~/scratch/s_pombe/",
+                           group_size = 100,
+                           genome = 's_pombe',
+                           genomepath = "/scr1/users/yangk4/ref/genomes/s_pombe",
+                           gffpath = "/scr1/users/yangk4/ref/db/s_pombe_v2.gff3",
+                           gtfpath = "/scr1/users/yangk4/ref/db/s_pombe_v2.gtf",
+                           readlen =  "150",
+                           nprocs = "5",
+                           memory = "40"):
     #Similar to the above but modified to run tagdust filtered reads through the aligner
     fw = open(output_file + "_process", 'w+')
 
@@ -205,19 +218,15 @@ def tagdust():
             echo "/home/yangk4/FastQC/fastqc $i\_2.fastq -o ./fastqc_2 &" >> DL_and_process_$i
             echo "wait" >> DL_and_process_$i
             echo "#Run Tagdust instead of BBDUK to filter out bad reads using HMM"
-            echo "tagdust $i\_1.fastq $i\_2.fastq -1 O:N -2 P: AGATGTGTATAAGAGACAG -2 F:NNNNNNN -3 R:N -4 B:CTGTCTCTTATACACATCT" 
+            echo "tagdust $i\_1.fastq $i\_2.fastq -1 O:N -2 P:AGATGTGTATAAGAGACAG -3 F:NNNNNNN -4 R:N -5 P:CTGTCTCTTATACACATCT" 
             echo "#Run FASTQC again"
             echo "mkdir ./trimmed/fastqc_1" >> DL_and_process_$i
             echo "mkdir ./trimmed/fastqc_2" >> DL_and_process_$i
             echo "/home/yangk4/FastQC/fastqc ./trimmed/$i\_1_trimmed.fastq -o ./trimmed/fastqc_1 &" >> DL_and_process_$i
             echo "/home/yangk4/FastQC/fastqc ./trimmed/$i\_2_trimmed.fastq -o ./trimmed/fastqc_2 &" >> DL_and_process_$i
-            echo "#Run UMI Tools Extract"
-            echo "source /home/yangk4/majiq_2_install/env/bin/activate" >> DL_and_process_$i
-            echo "umi_tools extract -I ./trimmed/$i\_1_trimmed.fastq --bc-pattern=NNNNNNN --read2-in=./trimmed/$i\_2_trimmed.fastq --stdout=$i\_1_extract.fastq --read2-out=$i\_2_extract.fastq --log=$i\_UMI_extracted.log" >> DL_and_process_$i
-            echo "deactivate" >> DL_and_process_$i
             echo "#Run STAR"
             echo "STAR --genomeDir %s  --readFilesIn ./$i\_1_extract.fastq ./$i\_2_extract.fastq --runThreadN %s --outSAMtype BAM Unsorted --outFileNamePrefix ./$i. --outSAMattributes All --alignSJoverhangMin 8 --outSAMunmapped Within" >> DL_and_process_$i
-            echo "#Remove PCR Duplicates"
+            echo "#Remove PCR Duplicates based on tag from Tagdust"
             echo "samtools sort -@ %s -o $i.Aligned.sorted.bam $i.Aligned.out.bam" >> DL_and_process_$i
             echo "samtools index ./$i.Aligned.sorted.bam" >> DL_and_process_$i
             echo "source /home/yangk4/majiq_2_install/env/bin/activate" >> DL_and_process_$i
