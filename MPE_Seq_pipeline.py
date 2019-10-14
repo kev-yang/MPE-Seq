@@ -253,7 +253,7 @@ def tagdust(output_file = "s_pombe_tagdust",
         done
     
         ''' % (root_dir, files_to_process,  # general params
-               nprocs  # bbduck params
+               nprocs,  # bbduck params
                genomepath, nprocs,  # STAR params
                str(int(nprocs) - 1),  # samtools sort params
                gtfpath, nprocs,  # rMATS params
