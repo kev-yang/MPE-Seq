@@ -157,7 +157,7 @@ readlen,genome,genomepath, gffpath, nprocs, nprocs #MAJIQ params
 # done\n''' % genome)
     fw.close()
 
-def tagdust(output_file = "s_pombe",
+def tagdust(output_file = "s_pombe_tagdust",
                            files_to_process="s_pombe_list",
                            root_dir="~/scratch/s_pombe/",
                            group_size = 100,
