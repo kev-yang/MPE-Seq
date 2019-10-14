@@ -1,0 +1,68 @@
+# !/bin/bash
+#$ -l h_vmem=8G
+#$ -l m_mem_free=8G
+#$ -pe smp 10
+module unload binutils
+module load STAR
+module load SRA-Toolkit
+module load jdk
+module load python/3.6
+module load gcc8
+module load SAMtools
+#Now do real things
+cd /scr1/users/yangk4/mpe_seq/
+mkdir STAR
+for i in `cat process_list`;
+do
+    echo "#Run FASTQC"
+    echo "mkdir ./fastqc_1" >> DL_and_process_$i
+    echo "mkdir ./fastqc_2" >> DL_and_process_$i
+    echo "/home/yangk4/FastQC/fastqc $i\_1.fastq -o ./fastqc_1 &" >> DL_and_process_$i
+    echo "/home/yangk4/FastQC/fastqc $i\_2.fastq -o ./fastqc_2 &" >> DL_and_process_$i
+    echo "wait" >> DL_and_process_$i
+    echo "#Trim with BBDUK"
+    echo "mkdir ./trimmed" >> DL_and_process_$i
+    echo "/home/yangk4/bbmap/bbduk.sh ref=/home/yangk4/bbmap/resources/adapters.fa in1=$i\_1.fastq in2=$i\_2.fastq out1=./trimmed/$i\_1_trimmed.fastq out2=./trimmed/$i\_2_trimmed.fastq ktrim=r k=23 mink=11 hdist=1 tpe tbo qtrim=r trimq=20 qin=33 -Xmx40g threads=5" >> DL_and_process_$i
+    echo "#Run FASTQC again"
+    echo "mkdir ./trimmed/fastqc_1" >> DL_and_process_$i
+    echo "mkdir ./trimmed/fastqc_2" >> DL_and_process_$i
+    echo "/home/yangk4/FastQC/fastqc ./trimmed/$i\_1_trimmed.fastq -o ./trimmed/fastqc_1 &" >> DL_and_process_$i
+    echo "/home/yangk4/FastQC/fastqc ./trimmed/$i\_2_trimmed.fastq -o ./trimmed/fastqc_2 &" >> DL_and_process_$i
+    echo "#Run UMI Tools Extract"
+    echo "source /home/yangk4/majiq_2_install/env/bin/activate" >> DL_and_process_$i
+    echo "umi_tools extract -I ./trimmed/$i\_1_trimmed.fastq --bc-pattern=NNNNNNN --read2-in=./trimmed/$i\_2_trimmed.fastq --stdout=$i\_1_extract.fastq --read2-out=$i\_2_extract.fastq --log=$i\_UMI_extracted.log" >> DL_and_process_$i
+    echo "deactivate" >> DL_and_process_$i
+    echo "#Run STAR"
+    echo "STAR --genomeDir /scr1/users/yangk4/ref/genomes/s288c  --readFilesIn ./$i\_1_extract.fastq ./$i\_2_extract.fastq --runThreadN 5 --outSAMtype BAM Unsorted --outFileNamePrefix ./$i. --outSAMattributes All --alignSJoverhangMin 8 --outSAMunmapped Within" >> DL_and_process_$i
+    echo "#Remove PCR Duplicates"
+    echo "samtools sort -@ 4 -o $i.Aligned.sorted.bam $i.Aligned.out.bam" >> DL_and_process_$i
+    echo "samtools index ./$i.Aligned.sorted.bam" >> DL_and_process_$i
+    echo "source /home/yangk4/majiq_2_install/env/bin/activate" >> DL_and_process_$i
+    echo "umi_tools dedup -I $i.Aligned.sorted.bam --paired -S $i\_deduplicated.bam --log=$i\_UMI_deduplicated.log" >> DL_and_process_$i
+    echo "deactivate" >> DL_and_process_$i
+    echo "#Index with samtools for MAJIQ"
+    echo "samtools index $i\_deduplicated.bam" >> DL_and_process_$i
+    echo "#Copy duplicate for rMATS"
+    echo "cp ${i}_deduplicated.bam ${i}_deepfake.bam" >> DL_and_process_$i
+    echo "#Run bedtools" >> DL_and_process_$i
+    echo "#Run rMATS" >> DL_and_process_$i
+    echo "source /home/yangk4/rmats_install/rmatsenv/bin/activate" >> DL_and_process_$i
+    echo "${i}_deduplicated.bam" >> DL_and_process_${i}_b1
+    echo "${i}_deepfake.bam" >> DL_and_process_${i}_b2
+    mkdir ./rMATS_$i
+    echo "python2 /home/yangk4/rmats_install/rMATS.4.0.2/rMATS-turbo-Linux-UCS2/rmats.py --b1 DL_and_process_${i}_b1 --b2 DL_and_process_${i}_b2 --gtf /scr1/users/yangk4/ref/db/s288c.gtf --od ./rMATS_$i --nthread 5" >> DL_and_process_$i
+    echo "deactivate" >> DL_and_process_$i
+    echo "#Run MAJIQ" >> DL_and_process_$i
+    echo "source /home/yangk4/majiq_2_install/env/bin/activate" >> DL_and_process_$i
+    mkdir ./majiq_$i
+    echo -e "[info]\nreadlen=75\nbamdirs=./\ngenome=s288c\ngenome_path=/scr1/users/yangk4/ref/genomes/s288c\n[experiments]\nWT=${i}_deduplicated" >> ./majiq_$i/settings.txt
+    echo "majiq build /scr1/users/yangk4/ref/db/s288c.gff3 -c ./majiq_$i/settings.txt --output ./majiq_$i/build --nproc 5" >> DL_and_process_$i
+    echo "majiq psi ./majiq_$i/build/$i\_deduplicated.majiq --nproc 5 --output ./majiq_$i --name $i" >> DL_and_process_$i
+    echo "voila psi ./majiq_$i/$i.psi.voila --splicegraph ./majiq_$i/build/splicegraph.sql -o ./majiq_$i/voila" >> DL_and_process_$i
+    echo "deactivate" >> DL_and_process_$i
+done
+
+#Processing chunk 0
+bash DL_and_process_SRR7208774 &
+bash DL_and_process_SRR7208776 &
+wait
