@@ -1,13 +1,14 @@
 def MPE_Seq_paired_process(output_file = "s_pombe",
                            files_to_process="s_pombe_list",
                            root_dir="~/scratch/s_pombe/",
-                           group_size = 100, 
+                           group_size = 3,
                            genome = 's_pombe',
                            genomepath = "/scr1/users/yangk4/ref/genomes/s_pombe",
+                           rRNApath="/scr1/users/yangk4/ref/genomes/s_pombe_rRNA",
                            gffpath = "/scr1/users/yangk4/ref/db/s_pombe_v2.gff3",
                            gtfpath = "/scr1/users/yangk4/ref/db/s_pombe_v2.gtf",
                            readlen =  "150",
-                           nprocs = "5",
+                           nprocs = "36",
                            memory = "40"):
 
 
@@ -68,6 +69,10 @@ cd %s
 mkdir STAR
 for i in `cat %s`;
 do
+    echo "#unzip and cat all lanes"
+    echo "unpigz -p %s i*.gz"
+    echo "cat i*_R1_*.fastq >> i_1.fastq"
+    echo "cat i*_R2_*.fastq >> i_1.fastq"
     echo "#Run FASTQC"
     echo "mkdir ./fastqc_1" >> DL_and_process_$i
     echo "mkdir ./fastqc_2" >> DL_and_process_$i
@@ -76,6 +81,11 @@ do
     echo "wait" >> DL_and_process_$i
     echo "#Trim with BBDUK"
     echo "mkdir ./trimmed" >> DL_and_process_$i
+    #right now, this command specifically does the following by flag
+    #minlength trims to a length equivalent to max primer length, e.g. 28 for our libraries or 26 for Pleiss libraries.
+    #ktrim=r is for right-trimming of Illumina adapter sequences
+    #k=23 makes bbduk try to match 23-mers everywhere, #mink matches just the last 11-mer of the ends
+    #Xmx specifices memory usage, 
     echo "/home/yangk4/bbmap/bbduk.sh ref=/home/yangk4/bbmap/resources/adapters.fa in1=$i\_1.fastq in2=$i\_2.fastq out1=./trimmed/$i\_1_trimmed.fastq out2=./trimmed/$i\_2_trimmed.fastq ktrim=r k=23 mink=11 hdist=1 tpe tbo qtrim=r trimq=20 qin=33 -Xmx%sg threads=%s" >> DL_and_process_$i
     echo "#Run FASTQC again"
     echo "mkdir ./trimmed/fastqc_1" >> DL_and_process_$i
@@ -86,8 +96,13 @@ do
     echo "source /home/yangk4/majiq_2_install/env/bin/activate" >> DL_and_process_$i
     echo "umi_tools extract -I ./trimmed/$i\_1_trimmed.fastq --bc-pattern=NNNNNNN --read2-in=./trimmed/$i\_2_trimmed.fastq --stdout=$i\_1_extract.fastq --read2-out=$i\_2_extract.fastq --log=$i\_UMI_extracted.log" >> DL_and_process_$i
     echo "deactivate" >> DL_and_process_$i
-    echo "#Run STAR"
-    echo "STAR --genomeDir %s  --readFilesIn ./$i\_1_extract.fastq ./$i\_2_extract.fastq --runThreadN %s --outSAMtype BAM Unsorted --outFileNamePrefix ./$i. --outSAMattributes All --alignSJoverhangMin 8 --outSAMunmapped Within" >> DL_and_process_$i
+    #Use STAR to first filter out rRNA-mapping sequences
+    #echo "STAR --genomeDir %s --readFilesIn ./$i\_1_extract.fastq ./$i\_2_extract.fastq --runThreadN %s --outSAMtype BAM Unsorted --outFileNamePrefix ./$i\_rRNA_mapped. --outSAMattributes All --outReadsUnmapped FastX" >> DL_and_process_$i
+    #Use Bowtie2 to first filter out rRNA-mapping sequences and sequences that are too short
+    #echo "bowtie2 -x %s -1 ./$i\_1_extract.fastq -2 ./$i\_2_extract.fastq -p %s --trim5 24 --sensitive --un ./$i\_rRNA_filtered.fq -S ./$i\_rRNA_mapped.sam --al-conc ./$i\_rRNA_mapped.fq"
+    #bowtie2 -x /home/yangk4/scratch/ref/rRNA/rRNA.schizosaccharomyces_pombe -1 ./$i\_1_extract.fastq -2 ./$i\_2_extract.fastq -p 8 --sensitive --un-conc ./$i\_rRNA_unmapped_bowtie.fq -S ./$i\_rRNA_mapped_bowtie.sam --al-conc ./$i\_rRNA_mapped_bowtie.fq"
+    echo "Run STAR"
+    echo "STAR --genomeDir %s  --readFilesIn ./$i\_1_extract.fastq ./$i\_2_extract.fastq --runThreadN %s --outSAMtype BAM Unsorted --outFileNamePrefix ./$i. --outSAMattributes All --alignSJoverhangMin 8 --outReadsUnmapped Fastx" >> DL_and_process_$i
     echo "#Remove PCR Duplicates"
     echo "samtools sort -@ %s -o $i.Aligned.sorted.bam $i.Aligned.out.bam" >> DL_and_process_$i
     echo "samtools index ./$i.Aligned.sorted.bam" >> DL_and_process_$i
@@ -117,12 +132,13 @@ do
 done
 
 ''' % (#root_dir, #general params
-root_dir,files_to_process, #general params
-memory,nprocs, #bbduck params
-genomepath,nprocs, #STAR params
-str(int(nprocs)-1), #samtools sort params
-gtfpath, nprocs, #rMATS params
-readlen,genome,genomepath, gffpath, nprocs, nprocs #MAJIQ params
+    root_dir, files_to_process,  #general params
+    memory, nprocs,  #bbduck params
+    #rRNApath, nprocs,  # STAR rRNA filtering params
+    genomepath, nprocs,  #STAR params
+    str(int(nprocs)-1),  #samtools sort params
+    gtfpath, nprocs,  #rMATS params
+    readlen, genome, genomepath, gffpath, nprocs, nprocs #MAJIQ params
 ))
     
     
