@@ -7,7 +7,6 @@ Created on Sep 14, 2019
 import shutil
 from subprocess import *
 #This script will extract unextended primer via several calls to bbduk, allowing for n mismatches
-#First, call 
 
 def pretrim(output_file = "mpe_seq",
                            files_to_process="process_list",
@@ -49,50 +48,6 @@ memory,nprocs, #bbduck params
             arr_string += '"%s" ' % samp
         fw.write('wait\n')
     fw.close()
-
-def remove_primer(fastqpath = "/scr1/users/yangk4/KY001/KY001_extract_u",
-                  primerlist = "/scr1/users/yangk4/KY001/50_primers",mismatch="7"):
-    
-    #Currently this script assumes paired end reads
-    #fastqpath is the path to the .fastq prior to "_1.fastq" and "_2.fastq"
-    #primerlist is the path to the list of primers to query for
-    
-    #Do some pre-processing on primer list to "trim" them to just the primed region and arrange them into sublists by length
-    primerl = []
-    with open(primerlist) as inF:
-        for line in inF:
-            primerl.append(line.split("\n")[0])
-    sorted_primers = []
-    for i in range(min([len(x) for x in primerl]),max([len(x) for x in primerl])+1):
-        temp = []
-        for j in primerl:
-            if len(j) == i:
-                temp.append(j)
-        if len(temp) > 0:
-            sorted_primers.append(temp)
-    #Now, iterate over each sorted sublist arranged by length
-    fileprefix = "/".join(fastqpath.split("/")[:-1])+"/"
-    for temp in sorted_primers:
-        #First, copy the fastq to some temp files and call bbduk to write out filtered reads to separate file
-        shutil.copyfile(fastqpath+"_1.fastq","/"+fileprefix+"temp_1.fastq")
-        shutil.copyfile(fastqpath+"_2.fastq","/"+fileprefix+"temp_2.fastq")
-        with open(fileprefix+"temp_primers.fa",'w+') as primerF:
-            k = 0
-            for i in temp:
-                k+=1
-                primerF.write(">Primer_"+str(k)+"\n"+i+"\n")
-            primerF.write("\n")
-        print("/home/yangk4/bbmap/bbduk.sh "+fileprefix+"temp_1.fastq"+" out=clean.fq outm="+
-             fastqpath+"_minlen_1.fastq"+" minlength="+str(len(temp[0])))
-        call("/home/yangk4/bbmap/bbduk.sh "+fileprefix+"temp_1.fastq"+" out=clean.fq outm="+
-             fastqpath+"_minlen_1.fastq"+" minlength="+str(len(temp[0])),shell=True)
-        call("/home/yangk4/bbmap/bbduk.sh "+fileprefix+"temp_2.fastq"+" out=clean.fq outm="+
-             fastqpath+"_minlen_2.fastq"+" minlength="+str(len(temp[0])),shell=True)
-        #After filtering reads below a minimum length, look for matches to the templist
-        call("/home/yangk4/bbmap/bbduk.sh "+fastqpath+"_minlen_1.fastq"+" out=clean.fq ref="+
-             fileprefix+"temp_primers.fa"+" hdist=3"+" k="+str(len(temp[0])-10)+" stats="+str(len(temp[0]))+"_1_stat.txt",shell=True)
-        call("/home/yangk4/bbmap/bbduk.sh "+fastqpath+"_minlen_2.fastq"+" out=clean.fq ref="+
-             fileprefix+"temp_primers.fa"+" hdist=3"+" k="+str(len(temp[0])-10)+" stats="+str(len(temp[0]))+"_2_stat.txt",shell=True)
 
 def remove_primer(fastqpath = "/scr1/users/yangk4/KY001/KY001_extract_u",
                   primerlist = "/scr1/users/yangk4/KY001/50_primers",mismatch="7"):

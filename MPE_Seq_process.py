@@ -7,12 +7,94 @@ from subprocess import call
 import os
 import matplotlib.pyplot as plt
 import numpy as np
+#Above the divider is the collated pipeline I use for KY002, below is for KY001
+#For KY002, we first want some sanity checks. Here are some initial objectives:
+#Overall sequence composition - how does the library look overall?
+#Do this analysis per library, and then comparing the library prep methods stim/unstim to each other
+#%Mapped and deduplicated, final number of reads left
+#Percent nucleotide composition of mapped sequences (should this be all mapped or just targeted events?)
+#PCA analysis of 1) all genes, 2) psi values of targeted genes
 
+#On vs off-target
+#Extract the targeted genes and LSVs out of the mapped file
+#Per LSV, make scatter plots of number of "on target" and "off target" primed reads versus the following
+
+#Per targeted LSV, how many
+def gen_lsv_bed(gtf_path="/Users/kyang/Box Sync/Rotation_2/ref/gencode.v31.annotation.gtf.bed",
+                tsv_path="/Users/kyang/Box Sync/Rotation_2/Primers/KY002",
+                out_path="/Users/kyang/Box Sync/Rotation_2/Primers/KY002/KY002_on_target"):
+    # given the folder to the .tsvs of KY002, return separately 2 files:
+    #1) a list of the gene ENSG ID's and 2) a bed file of targeted junctions
+    # currently this method is limited to target exons specifically
+    #gtf_path = path to the folder containing the gencode gtf file converted to bed via bedops (see Analysis/11_29_19.ipynb)
+    #tsv_path = path to the folder of all tsvs from previous classify_process method in OligoMiner_wrapper
+    #out_path = the prefix for generating the 2 files, one of which will be a simple text file (list of ENSGs) and
+    #the other of which will be a properly formatted .bed file
+
+    #Additionally, it would be helpful to have a third file which outputs coordinates to determine
+    #reads which are extended at least from 1 base pair upstream of the primer
+    #up to 1 base pair downstream of the exon junction coordinate
+
+    #The last useful measures would be coordinates to compute psi values:
+    #Namely this would be coordinates of 1 splicing event over the other... think about this more
+    #it will be a fraction of anything that overlaps with 1 basepair before the junction
+    bed = open(out_path+"_LSVs.bed", 'w+')
+    genes = open(out_path+"_genes.bed", 'w+')
+    extended = open(out_path+"_extended.bed", 'w+')
+    #bed.write("chr\tlower_bound\tupper_bound\n")
+    gtf_ref = open(gtf_path).readlines()
+    genelist,bedlist,extendlist = [],[],[]
+    with open(tsv_path) as inF:
+        file_list = [x for x in os.listdir() if ".tsv" in x]
+        for f in file_list:
+            with open(f) as inF:
+                for line in inF:
+                    if "ENSG" in line:
+                        subline_list = line.split("\t")[1].split(":")
+                        #First, find the corresponding gene so we can extract info about chromosome
+                        #and also write out the bed file for the gene
+                        gene = subline_list[0].split(".")[0]
+                        linelist = []
+                        for line in gtf_ref:
+                            if gene in line and "gene" in line:
+                                linelist = line.split("\t")
+                                chrom = linelist[0]
+                                genelist.append("\t".join(linelist[:3]+[gene]))
+                                break
+                        else:
+                            print("ERROR")
+                        # if positive stranded, junction corresponds to upstream exon boundary
+                        if "+" in subline_list[-1]:
+                            bedlist.append(chrom + "\t" + str(int(subline_list[2].split("-")[0])-1) + "\t" +
+                                      subline_list[2].split("-")[0] + "\t"+ subline_list.join(":"))
+                            extendlist.append(chrom + "\t" + str(int(subline_list[2].split("-")[0])-(50-int(linelist[3]))) + "\t" +
+                                      subline_list[2].split("-")[0] + "\t"+ subline_list.join(":"))
+                        # if negative stranded, junction corresponds to downstream exon boundary
+                        else:
+                            bedlist.append(chrom + "\t" + str(int(subline_list[2].split("-")[1])+1) + "\t" +
+                                      subline_list[2].split("-")[1] + "\t"+ subline_list.join(":"))
+                            extendlist.append(chrom + "\t" + str(int(subline_list[2].split("-")[1]) + (50 - int(linelist[3]))) + "\t" +
+                                              subline_list[2].split("-")[1] + "\t" + subline_list.join(":"))
+    bed.write(bedlist.join("\n"))
+    genes.write(genelist.join("\n"))
+    extended.write(extendlist.join("\n"))
+#PSI calculations
+#-Calculate psi for all junctions as a simple measure independent of MAJIQ and see how well it agrees
+
+
+
+
+###DIVIDER
+
+#The pipeline is currently as follows for 50 primer experiment:
+#gen_lsv_bed ->
 def gen_lsv_bed(tsv_path="/Users/kyang/Dropbox/Rotation_2/Primers/caleb_primers/first_50_oligos_moreinfo.tsv",
                 bed_path="/Users/kyang/Dropbox/Rotation_2/MPE-Seq/09_10_19/50_lsvs_n_plus_1.bed"):
     #given the .tsv of 50 oligos info, return an LSV bed
     #bed 
     #currently this method is limited to target exons specifically
+    #update 12_3_19: This was done wrong!! We reversed the order of coordinates for the upstream positive stranded
+    #boundary
     bed = open(bed_path,'w+')
     #bed.write("chr\tlower_bound\tupper_bound\n")
     with open(tsv_path) as inF:
@@ -26,8 +108,8 @@ def gen_lsv_bed(tsv_path="/Users/kyang/Dropbox/Rotation_2/Primers/caleb_primers/
                     subline = linelist[17].split(":")
                     #print(str(subline))
                     if subline[-1] == "+":
-                        print(subline[0]+"\t"+subline[1].split("-")[0]+"\t"+str(int(subline[1].split("-")[0])+1)+"\n")
-                        bed.write(subline[0]+"\t"+subline[1].split("-")[0]+"\t"+str(int(subline[1].split("-")[0])+1)+"\n")
+                        print(subline[0]+"\t"+str(int(subline[1].split("-")[0])-1)+"\t"+subline[1].split("-")[0]+"\n")
+                        bed.write(subline[0]+"\t"+str(int(subline[1].split("-")[0])-1)+"\t"+subline[1].split("-")[0]+"\n")
                     #if negative stranded, junction corresponds to downstream exon boundary
                     else:
                         print("pass")
@@ -35,23 +117,33 @@ def gen_lsv_bed(tsv_path="/Users/kyang/Dropbox/Rotation_2/Primers/caleb_primers/
                         bed.write(subline[0]+"\t"+subline[1].split("-")[1]+"\t"+str(int(subline[1].split("-")[1])+1)+"\n")    
                                        
     bed.close()
-def traverse_lsv_bed(bed_path="/Users/kyang/Dropbox/Rotation_2/MPE-Seq/09_10_19/50_lsvs.bed",
+def rewrite_lsv_bed(bed_path="/Users/kyang/Dropbox/Rotation_2/MPE-Seq/09_10_19/50_lsvs.bed",
                      rootdir="/Users/kyang/Dropbox/Rotation_2/MPE-Seq/09_10_19/"):
-        #for some inane reason the bed file from gen_lsv_bed -> Liftover doesn't work so traverse it line by line in calling bedtools
-        os.chdir(rootdir)
-        with open(bed_path) as inF:
-            for line in inF:
-                with open("temp.bed",'w+') as temp:
-                    temp.write(line)
-                call("bedtools intersect -b KY001_deduplicated.bam -a temp.bed -c -bed >> intersect_lsvs.bed",shell=True)
-def traverse_lsv_bed2(bed_path="/Users/kyang/Dropbox/Rotation_2/MPE-Seq/09_10_19/50_lsvs.bed",
-                     rootdir="/Users/kyang/Dropbox/Rotation_2/MPE-Seq/09_10_19/"):
-        #for some inane reason the bed file from gen_lsv_bed -> Liftover doesn't work so traverse it line by line in calling bedtools
+        #for some inane reason the bed file from gen_lsv_bed -> Liftover doesn't work so traverse it line by line writing a new file
+        #then call bedtool afterwards
         os.chdir(rootdir)
         with open("temp.bed",'w+') as temp:
             with open(bed_path) as inF:
                 for line in inF:
                         temp.write(line)
+def traverse_lsv_bed(bed_path="/Users/kyang/Dropbox/Rotation_2/MPE-Seq/09_10_19/50_lsvs.bed",
+                     rootdir="/Users/kyang/Dropbox/Rotation_2/MPE-Seq/09_10_19/"):
+    #this is he funciton call to bedtools to see the interseciton between the bam and he temp file, to see
+    #how many "ON target" reads there are
+    os.chdir(rootdir)
+    call("bedtools intersect -b KY001_deduplicated.bam -a temp.bed -c -bed >> intersect_lsvs.bed", shell=True)
+
+
+def traverse_lsv_bed2(bed_path="/Users/kyang/Dropbox/Rotation_2/MPE-Seq/09_10_19/50_lsvs.bed",
+                     rootdir="/Users/kyang/Dropbox/Rotation_2/MPE-Seq/09_10_19/"):
+    # for some inane reason the bed file from gen_lsv_bed -> Liftover doesn't work so traverse it line by line in calling bedtools
+    #otherwise, same funciton as above
+    os.chdir(rootdir)
+    with open(bed_path) as inF:
+        for line in inF:
+            with open("temp.bed", 'w+') as temp:
+                temp.write(line)
+            call("bedtools intersect -b KY001_deduplicated.bam -a temp.bed -c -bed >> intersect_lsvs.bed", shell=True)
 
 def gen_primerable_seq_fasta(tsv_path="/Users/kyang/Dropbox/Rotation_2/Primers/caleb_primers/first_50_oligos_moreinfo_alphabet.tsv",
         fastq_path="/Users/kyang/Dropbox/Rotation_2/Primers/caleb_primers/50_lsvs_alphabet.fastq"):
@@ -196,13 +288,22 @@ def gen_primer_fasta(primerpath = "/Users/kyang/Dropbox/Rotation_2/MPE-Seq/09_10
                 linelist = line.split("\t")
                 inG.write(">"+linelist[0]+"\n"+linelist[1][:-1]+"\n")
 
+def gen_primer_list2(primerpath = "/Users/kyang/Dropbox/Rotation_2/MPE-Seq/s_pombe/s_pombe_primers.txt",
+                     rootpath = "/Users/kyang/Dropbox/Rotation_2/MPE-Seq/s_pombe/"):
+    #from caleb file, generate a primer FASTA file
+    os.chdir(rootpath)
+    with open(primerpath) as inF:
+        with open("primers.txt",'w+') as inG:
+            for line in inF:
+                inG.write(line[line.rfind("N")+1:-1]+",")
+
 def blast_off_target_unmapped(db = False,
                               primerpath = "/scr1/users/yangk4/KY001/50primers.fasta",
                               rootpath = "/Users/kyang/Dropbox/Rotation_2/MPE-Seq/09_10_19/blast/",
                               prefix = "/scr1/users/yangk4/KY001/",
                               dbpath = "/scr1/users/yangk4/KY001/blastdb",
                               nthreads = "5"):
-    #Given an input file of primers, generate a bash file for HPC which wilfl
+    #Given an input file of primers, generate a bash file for HPC which will
     #blast each primer against unmapped and targeted separately/in parallel
     #db = False if fasta not generated yet into blastdb, otherwise the path provided will be the path to db
     #primerpath = FASTA file of primers to BLASTN-short for
