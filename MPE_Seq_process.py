@@ -5,6 +5,8 @@ Created on Sep 16, 2019
 '''
 from subprocess import call
 import os
+from typing import List
+
 import matplotlib.pyplot as plt
 import numpy as np
 #Above the divider is the collated pipeline I use for KY002, below is for KY001
@@ -20,9 +22,9 @@ import numpy as np
 #Per LSV, make scatter plots of number of "on target" and "off target" primed reads versus the following
 
 #Per targeted LSV, how many
-def gen_lsv_bed(gtf_path="/Users/kyang/Box Sync/Rotation_2/ref/gencode.v31.annotation.gtf.bed",
-                tsv_path="/Users/kyang/Box Sync/Rotation_2/Primers/KY002",
-                out_path="/Users/kyang/Box Sync/Rotation_2/Primers/KY002/KY002_on_target"):
+def gen_lsv_bed_1(gtf_path="/Users/kyang/Box Sync/Rotation_2/ref/gencode.v31.annotation.gtf.bed",
+                tsv_path="/Users/kyang/Box Sync/Rotation_2/Primers/KY002/",
+                out_path="/Users/kyang/Box Sync/Rotation_2/Primers/KY002/KY002_on_target_"):
     # given the folder to the .tsvs of KY002, return separately 2 files:
     #1) a list of the gene ENSG ID's and 2) a bed file of targeted junctions
     # currently this method is limited to target exons specifically
@@ -38,46 +40,52 @@ def gen_lsv_bed(gtf_path="/Users/kyang/Box Sync/Rotation_2/ref/gencode.v31.annot
     #The last useful measures would be coordinates to compute psi values:
     #Namely this would be coordinates of 1 splicing event over the other... think about this more
     #it will be a fraction of anything that overlaps with 1 basepair before the junction
-    bed = open(out_path+"_LSVs.bed", 'w+')
-    genes = open(out_path+"_genes.bed", 'w+')
-    extended = open(out_path+"_extended.bed", 'w+')
     #bed.write("chr\tlower_bound\tupper_bound\n")
     gtf_ref = open(gtf_path).readlines()
     genelist,bedlist,extendlist = [],[],[]
-    with open(tsv_path) as inF:
-        file_list = [x for x in os.listdir() if ".tsv" in x]
-        for f in file_list:
-            with open(f) as inF:
-                for line in inF:
-                    if "ENSG" in line:
-                        subline_list = line.split("\t")[1].split(":")
-                        #First, find the corresponding gene so we can extract info about chromosome
-                        #and also write out the bed file for the gene
-                        gene = subline_list[0].split(".")[0]
-                        linelist = []
-                        for line in gtf_ref:
-                            if gene in line and "gene" in line:
-                                linelist = line.split("\t")
-                                chrom = linelist[0]
-                                genelist.append("\t".join(linelist[:3]+[gene]))
-                                break
-                        else:
-                            print("ERROR")
-                        # if positive stranded, junction corresponds to upstream exon boundary
-                        if "+" in subline_list[-1]:
-                            bedlist.append(chrom + "\t" + str(int(subline_list[2].split("-")[0])-1) + "\t" +
-                                      subline_list[2].split("-")[0] + "\t"+ subline_list.join(":"))
-                            extendlist.append(chrom + "\t" + str(int(subline_list[2].split("-")[0])-(50-int(linelist[3]))) + "\t" +
-                                      subline_list[2].split("-")[0] + "\t"+ subline_list.join(":"))
-                        # if negative stranded, junction corresponds to downstream exon boundary
-                        else:
-                            bedlist.append(chrom + "\t" + str(int(subline_list[2].split("-")[1])+1) + "\t" +
-                                      subline_list[2].split("-")[1] + "\t"+ subline_list.join(":"))
-                            extendlist.append(chrom + "\t" + str(int(subline_list[2].split("-")[1]) + (50 - int(linelist[3]))) + "\t" +
-                                              subline_list[2].split("-")[1] + "\t" + subline_list.join(":"))
-    bed.write(bedlist.join("\n"))
-    genes.write(genelist.join("\n"))
-    extended.write(extendlist.join("\n"))
+    os.chdir(tsv_path)
+    file_list = [x for x in os.listdir() if ".tsv" in x]
+    for f in file_list:
+        bed = open(out_path + f.split(".")[0] + "_LSVs.bed", 'w+')
+        genes = open(out_path + f.split(".")[0] + "_genes.bed", 'w+')
+        extended = open(out_path + f.split(".")[0] + "_extended.bed", 'w+')
+        with open(f) as inF:
+            for line in inF:
+                if "ENSG" in line:
+                    subline_list: List[str] = line.split("\t")[1].split(":")
+                    if "constitutive" in line:
+                        subline_list[2] = "".join([subline_list[2].split("_")[0]+subline_list[2][-3:]])
+                    #First, find the corresponding gene so we can extract info about chromosome
+                    #and also write out the bed file for the gene
+                    gene = subline_list[0].split(".")[0]
+                    linelist = []
+                    for line2 in gtf_ref:
+                        if gene in line2 and "gene" in line2:
+                            linelist = line2.split("\t")
+                            chrom = linelist[0]
+                            genelist.append("\t".join(linelist[:3]+[gene]))
+                            break
+                    else:
+                        print("ERROR")
+                    # if positive stranded, junction corresponds to upstream exon boundary
+                    if "+" in subline_list[-1]:
+                        bedlist.append(chrom + "\t" + str(int(subline_list[2].split("-")[0])-1) + "\t" +
+                                  subline_list[2].split("-")[0] + "\t" + line.split("\t")[1])
+                        extendlist.append(chrom + "\t" + str(int(subline_list[2].split("-")[0])-(50-int(line.split("\t")[3]))) + "\t" +
+                                  subline_list[2].split("-")[0] + "\t" + line.split("\t")[1])
+                    # if negative stranded, junction corresponds to downstream exon boundary
+                    else:
+                        bedlist.append(chrom + "\t" + subline_list[2].split("-")[1][:-1] + "\t" +
+                                       str(int(subline_list[2].split("-")[1][:-1]) + 1) + "\t" + line.split("\t")[1])
+                        extendlist.append(chrom + "\t" + subline_list[2].split("-")[1][:-1] + "\t" +
+                                          str(int(subline_list[2].split("-")[1][:-1]) + (50 - int(line.split("\t")[3]))) + "\t" + line.split("\t")[1])
+        bed.write("\n".join(bedlist))
+        genes.write("\n".join(genelist))
+        extended.write("\n".join(extendlist))
+        bed.close()
+        genes.close()
+        extended.close()
+def iter_intersect
 #PSI calculations
 #-Calculate psi for all junctions as a simple measure independent of MAJIQ and see how well it agrees
 
