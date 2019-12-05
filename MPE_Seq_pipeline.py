@@ -137,7 +137,7 @@ do
     echo "deactivate" >> DL_and_process_$i
 done
 
-''' % (root_dir,str(int(memory)*group_size),str(int(memory)*group_size),str(int(nprocs)*group_size),str(int(nprocs)*group_size), #general params 1
+''' % (root_dir,str(int(memory)*group_size/nprocs),str(int(memory)*group_size/nprocs),str(int(nprocs)*group_size),str(int(nprocs)*group_size), #general params 1
     root_dir,files_to_process.split("/")[-1],root_dir, root_dir, #general params 2
     nprocs, #pigz params
     root_dir, root_dir, root_dir, #general params 3
